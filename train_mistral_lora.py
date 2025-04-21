@@ -21,6 +21,7 @@ from peft import (
 from code.config_loader import load_config
 from code.data_preparation import prepare_tokenizer, prepare_dataset
 from code.model_preparation import prepare_model
+from code.metrics import calculate_accuracy, calculate_f1, calculate_exact_match, calculate_mrr, calculate_perplexity
 
 
 def parse_arguments():
@@ -28,6 +29,26 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Train Mistral LoRA model")
     parser.add_argument('--config', type=str, default='config.yaml', help='Path to the configuration file')
     return parser.parse_args()
+
+
+def compute_metrics(pred):
+    labels = pred.label_ids
+    preds = pred.predictions.argmax(-1)
+    
+    # Calculate metrics
+    acc = calculate_accuracy(preds, labels)
+    f1 = calculate_f1(preds, labels)
+    em = calculate_exact_match(preds, labels)
+    mrr = calculate_mrr(preds, labels)
+    perplexity = calculate_perplexity(pred.predictions, labels)
+    
+    return {
+        'accuracy': acc,
+        'f1': f1,
+        'exact_match': em,
+        'mrr': mrr,
+        'perplexity': perplexity
+    }
 
 
 def main():
@@ -79,6 +100,7 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         data_collator=data_collator,
+        compute_metrics=compute_metrics
     )
 
     # Train the model
